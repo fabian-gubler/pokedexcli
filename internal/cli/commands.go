@@ -2,28 +2,24 @@ package cli
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"text/tabwriter"
 
-	"github.com/fabian-gubler/pokedexcli/internal/api"
+	"github.com/fabian-gubler/pokedexcli/pkg/config"
 )
 
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(*config.Config) error
 }
 
-type config struct {
-	nextURL     string
-	previousURL string
-	apiClient   *api.PokeAPIClient
-}
 
-func (c *cliCommand) execute() error {
-	return c.callback()
+func (c *cliCommand) execute(cfg *config.Config) error {
+	return c.callback(cfg)
 }
 
 func initializeCommands() map[string]cliCommand {
@@ -51,7 +47,7 @@ func initializeCommands() map[string]cliCommand {
 	}
 }
 
-func commandHelp() error {
+func commandHelp(_ *config.Config) error {
 	// Create a tab writer to format the output as a table
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
@@ -68,30 +64,52 @@ func commandHelp() error {
 	return nil
 }
 
-func commandExit() error {
+func commandExit(_ *config.Config) error {
 	fmt.Println("Exiting Pokedex")
 	return nil
 }
 
-func commandMap() error {
-	pokeapiClient := api.NewPokeAPIClient()
+func commandMap(cfg *config.Config) error {
 
-	resp, err := pokeapiClient.ListLocationAreas()
+	resp, err := cfg.PokeapiClient.ListLocationAreas(cfg.NextLocationURL)
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Print results
 	fmt.Println("Locations:")
-	for _, area := range resp.Results{
+	for _, area := range resp.Results {
 		fmt.Printf(" - %s\n", area.Name)
 	}
+
+	cfg.NextLocationURL = resp.Next
+	cfg.PreviousLocationURL = resp.Previous
 
 	return nil
 }
 
-func commandMapb() error {
-	fmt.Println("Displaying the previous 20 locations")
+func commandMapb(cfg *config.Config) error {
+
+	if cfg.PreviousLocationURL == nil {
+		return errors.New("you're on the first page")
+	}
+
+	resp, err := cfg.PokeapiClient.ListLocationAreas(cfg.PreviousLocationURL)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Print results
+	fmt.Println("Locations:")
+	for _, area := range resp.Results {
+		fmt.Printf(" - %s\n", area.Name)
+	}
+
+	cfg.NextLocationURL = resp.Next
+	cfg.PreviousLocationURL = resp.Previous
+
 	return nil
 }
 
@@ -102,7 +120,7 @@ func readInput(prompt string) string {
 	return scanner.Text()
 }
 
-func RunCLI() {
+func RunCLI(cfg *config.Config) {
 	commands := initializeCommands()
 
 	for {
@@ -114,7 +132,7 @@ func RunCLI() {
 			continue
 		}
 
-		err := cmd.execute()
+		err := cmd.execute(cfg)
 		if err != nil {
 			fmt.Println("Error executing command:", err)
 		}
