@@ -24,10 +24,14 @@ func NewPokeAPIClient() *PokeAPIClient {
 	}
 }
 
-func (c *PokeAPIClient) ListLocationAreas() (models.LocationResp, error) {
+func (c *PokeAPIClient) ListLocationAreas(pageUrl *string) (models.LocationResp, error) {
 
 	endpoint := "/location"
 	fullURL := c.BaseURL + endpoint
+
+	if pageUrl != nil{
+		fullURL = *pageUrl
+	}
 
 	req, err := http.NewRequest("GET", fullURL, nil)
 	if err != nil {
