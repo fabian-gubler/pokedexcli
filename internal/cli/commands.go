@@ -3,7 +3,9 @@ package cli
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
+	"text/tabwriter"
 
 	"github.com/fabian-gubler/pokedexcli/internal/api"
 )
@@ -50,9 +52,19 @@ func initializeCommands() map[string]cliCommand {
 }
 
 func commandHelp() error {
-	fmt.Println("Available commands:")
-	fmt.Println("help - Displays a help message")
-	fmt.Println("exit - Exit the Pokedex")
+	// Create a tab writer to format the output as a table
+	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+	// Print header
+	fmt.Fprintln(writer, "Command\tDescription")
+
+	// Print all commands in table format
+	for _, cmd := range initializeCommands() {
+		fmt.Fprintf(writer, "%s\t%s\n", cmd.name, cmd.description)
+	}
+
+	// Flush the writer to ensure all data is written
+	writer.Flush()
 	return nil
 }
 
@@ -62,7 +74,19 @@ func commandExit() error {
 }
 
 func commandMap() error {
-	fmt.Println("Displaying the next 20 locations")
+	pokeapiClient := api.NewPokeAPIClient()
+
+	resp, err := pokeapiClient.ListLocationAreas()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Print results
+	fmt.Println("Locations:")
+	for _, area := range resp.Results{
+		fmt.Printf(" - %s\n", area.Name)
+	}
+
 	return nil
 }
 
