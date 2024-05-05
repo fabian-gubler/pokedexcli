@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"github.com/fabian-gubler/pokedexcli/internal/cli"
+)
 
-func main()  {
-	fmt.Println("Hello, World!")
+func main() {
+	cli.RunCLI()
 }
